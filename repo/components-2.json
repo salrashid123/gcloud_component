@@ -1,0 +1,35 @@
+{
+  "components": [
+    {
+      "data": {
+        "checksum": "cc6d141068a230dce47e3e84721c27616240be026a71fbb424147ca129b3954e", 
+        "contents_checksum": "a953cd418e2c7132afa5d153be1285e902d92e0d36135fdfc9bb7816cb03a6f0", 
+        "size": 2895, 
+        "source": "components/google-cloud-sdk-macro.tar.gz", 
+        "type": "tar"
+      }, 
+      "dependencies": [
+        "core" 
+      ], 
+      "details": {
+        "description": "Provides the gcloud scripting tool", 
+        "display_name": "gcloud embedded scripting tool"
+      }, 
+      "id": "macro", 
+      "is_configuration": false, 
+      "is_hidden": false, 
+      "is_required": false, 
+      "platform": {}, 
+      "version": {
+        "build_number": 20170723000000, 
+        "version_string": "2017.07.23"
+      }
+    }
+  ], 
+  "revision": 20170711000025, 
+  "schema_version": {
+    "no_update": false, 
+    "url": "file:///tmp/cloudsdk2/google-cloud-sdk.tar.gz", 
+    "version": 3
+  }
+}
