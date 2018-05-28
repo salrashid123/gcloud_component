@@ -9,13 +9,14 @@ import json
 
 class LibraryListJobs(object):
 
-  def __init__(self, some_arg="RUNNING"):
+  def __init__(self, dataset=None,state_filter=None):
 
     from google.cloud import bigquery
-    client = bigquery.Client(project='your_project')
-    dataset = client.dataset('your_dataset')
+    #client = bigquery.Client(project='your_project)
+    client = bigquery.Client()
+    dataset = client.dataset(dataset)
 
-    for j in client.list_jobs(state_filter='done'):
+    for j in client.list_jobs(state_filter=state_filter):
         if (j.job_type=='query'):
-          print j.id
+          print j.job_id
           break

@@ -3,7 +3,7 @@
 ## Introduction
 
 [Gcloud](https://cloud.google.com/sdk/gcloud/) is the command line interface Google Cloud Platform customers use to manage their resources.  customers
-often need to exeute complex, chained or repetitive task using gcloud.  For example, the scripts described in this 
+may need to exeute complex, chained or repetitive task using gcloud.  For example, the scripts described in this
 [post](https://cloudplatform.googleblog.com/2016/06/filtering-and-formatting-fun-with.html) describes some techniques to script gcloud.
 
 Large organizations may want to extend gcloud and add components that they define for specific tasks for their org with arguments they would define.
@@ -78,16 +78,128 @@ The default scripts you can run come in 3 formats though only one works currentl
 
   - Executes [google-cloud python](https://googlecloudplatform.github.io/google-cloud-python/) library.
 
+Here are some of the command sets and capabilities built in:
+
+```
+$ gcloud macro --help  
+
+NAME
+    gcloud macro - gcloud macro sample application; see
+        https://github.com/salrashid123/gcloud_component
+
+SYNOPSIS
+    gcloud macro COMMAND [GCLOUD_WIDE_FLAG ...]
+
+DESCRIPTION
+    Gcloud macro sample application; see
+    https://github.com/salrashid123/gcloud_component
+
+GCLOUD WIDE FLAGS
+    These flags are available to all commands: --account, --configuration,
+    --flatten, --format, --help, --log-http, --project, --quiet, --trace-token,
+    --user-output-enabled, --verbosity. Run $ gcloud help for details.
+
+COMMANDS
+    COMMAND is one of the following:
+
+     library-list-jobs
+        Lists currently running BQ jobs.
+
+     script-list-keys
+        Lists Service Account keys for all projects.
+
+     wrapper-list-instances
+        Lists GCE instances in a given running state.
+
+```
+
+- help options:
+
+```
+$ gcloud macro
+ERROR: (gcloud.macro) Command name argument expected.
+Usage: gcloud macro [optional flags] <command>
+  command may be         library-list-jobs | script-list-keys |
+                         wrapper-list-instances
+```
+
+- flag options
+
+```
+$ gcloud macro wrapper-list-instances --help
+NAME
+    gcloud macro wrapper-list-instances - lists GCE instances in a given
+        running state
+
+SYNOPSIS
+    gcloud macro wrapper-list-instances --state=STATE [GCLOUD_WIDE_FLAG ...]
+
+DESCRIPTION
+    List the instances in the current project based on state
+
+REQUIRED FLAGS
+     --state=STATE
+        Instance state to filter on. STATE must be one of: RUNNING, STOPPED,
+        TERMINATED.
+
+EXAMPLES
+    $ gcloud macro wrapper-list-instances --state RUNNING
+
+    [        {
+          "name": "janus",
+          "networkInterfaces": [
+            {
+              "accessConfigs": [
+                {
+                  "natIP": "35.193.54.213"
+                }
+              ]
+            }
+          ],
+          "status": "RUNNING"
+        }
+    ]
+```
+
+- input validation:
+```
+$ gcloud macro wrapper-list-instances --state blah
+ERROR: (gcloud.macro.wrapper-list-instances) argument --state: Invalid choice: 'blah'.
+
+Valid choices are [RUNNING, STOPPED, TERMINATED].
+```
+
+- finally the output
+
+```
+$ gcloud macro wrapper-list-instances --state RUNNING
+[
+  {
+    "name": "janus",
+    "networkInterfaces": [
+      {
+        "accessConfigs": [
+          {
+            "natIP": "35.193.54.213"
+          }
+        ]
+      }
+    ],
+    "status": "RUNNING"
+  }
+]
+```
+
 ### Bash Script
 
-The [bash script](repo/components/lib/googlecloudsdk/api_lib/macro/list_service_account_keys.sh) included in this repo simply lists out the service accounts for the default gcloud project. 
+The [bash script](repo/components/lib/googlecloudsdk/api_lib/macro/list_service_account_keys.sh) included in this repo simply lists out the service accounts for the default gcloud project.
 
 Users can define additional filters/formats and even powershell scripts with the following [blog]](https://cloudplatform.googleblog.com/2016/06/filtering-and-formatting-fun-with.html)
 
 ```python
 class ScriptListKeys(object):
   def __init__(self, some_arg="RUNNING"):
-    import os 
+    import os
     dir_path = os.path.dirname(os.path.realpath(__file__))
     import subprocess
     proc = subprocess.Popen(["list_service_account_keys.sh"],cwd=dir_path)
@@ -119,6 +231,14 @@ ProjectId:  mineral-minutia-820
         a9741789b47f55ad0496b2f13debc3455ab8aabd
 ```
 
+$ gcloud iam service-accounts keys list \
+   --iam-account svc-2-429@mineral-minutia-820.iam.gserviceaccount.com \
+   --filter="validBeforeTime.date('%Y-%m-%d', Z)<='2019-05-28'"
+KEY_ID                                    CREATED_AT            EXPIRES_AT
+58a20bac0027d81b9e7453e2005dc08fa2d9352c  2018-05-22T23:01:33Z  2018-06-07T23:01:33Z
+fb6ed7bf4b5072d3978b86ecfb7de7f3120cc9d2  2018-05-12T03:26:42Z  2018-05-28T03:26:42Z
+
+
 
 ### gcloud SDK internal API
 
@@ -146,7 +266,7 @@ class WrapperListInstances(object):
     result = f.getvalue()
     #instances = json.loads(result)
     #for instance in instances:
-    #  print (instance['name'] + " has external IP address " + 
+    #  print (instance['name'] + " has external IP address " +
     #        instance['networkInterfaces'][0]['accessConfigs'][0]['natIP'])
 ```
 
@@ -181,19 +301,25 @@ For example, the section below runs BQ client library to list out completed jobs
 class LibraryListJobs(object):
   def __init__(self, some_arg="RUNNING"):
     from google.cloud import bigquery
-    client = bigquery.Client(project='your_project')
-    dataset = client.dataset('your_dataset')
+    client = bigquery.Client()
+    dataset = client.dataset(dataset)
 
-    for j in client.list_jobs(state_filter='done'):
+    for j in client.list_jobs(state_filter=state_filter):
         if (j.job_type=='query'):
-          print j.id
+          print j.job_id
           break
 ```
 
 Note, this mechanism also __does not work completely__ since gcloud cli overrides the PYTHONPATH to even prevent system-wide site-libraries/ from getting loaded.
 
+that is, if you run the ```library-list-jobs``` macro, you'll see
+```
+$ gcloud macro library-list-jobs --dataset mineral-minutia-820:mydataset1 --state_filter done
+...
+ERROR: gcloud crashed (ImportError): No module named cloud
+```
 
-Even if the google/cloud/* is installed into those directories, google/cloud/ is namespaced and would miss the __init__.py folders 
+Even if the google/cloud/* is installed into those directories, google/cloud/ is namespaced and would miss the __init__.py folders
 (you can copy them in but that isn't correct)
 
 
@@ -202,7 +328,7 @@ virtualenv  env
 source env/bin/activate
 pip install google-cloud-bigquery
 cp -R env/lib/python2.7/site-packages/google path-to-sdk/google-cloud-sdk/lib/third_party/
-or 
+or
 cp -R env/lib/python2.7/site-packages/google path_to/repo/components/lib/googlecloudsdk/api_lib/macro/
 then add __init__.py to the subfolders
 ```
@@ -231,18 +357,53 @@ Then to generate the .tar.gz and components:
 
 * tar cvzf google-cloud-sdk-macro.tar.gz lib/
 
+      ```
+      $ tar cvzf google-cloud-sdk-macro.tar.gz lib/
+      lib/
+      lib/surface/
+      lib/surface/macro/
+      lib/surface/macro/library_list_jobs.pyc
+      lib/surface/macro/script_list_keys.pyc
+      lib/surface/macro/script_list_keys.py
+      lib/surface/macro/__init__.py
+      lib/surface/macro/wrapper_list_instances.pyc
+      lib/surface/macro/wrapper_list_instances.py
+      lib/surface/macro/library_list_jobs.py
+      lib/surface/macro/__init__.pyc
+      lib/googlecloudsdk/
+      lib/googlecloudsdk/command_lib/
+      lib/googlecloudsdk/command_lib/macro/
+      lib/googlecloudsdk/command_lib/macro/flags.pyc
+      lib/googlecloudsdk/command_lib/macro/util.py
+      lib/googlecloudsdk/command_lib/macro/flags.py
+      lib/googlecloudsdk/command_lib/macro/__init__.py
+      lib/googlecloudsdk/command_lib/macro/util.pyc
+      lib/googlecloudsdk/command_lib/macro/__init__.pyc
+      lib/googlecloudsdk/api_lib/
+      lib/googlecloudsdk/api_lib/macro/
+      lib/googlecloudsdk/api_lib/macro/library_list_jobs.pyc
+      lib/googlecloudsdk/api_lib/macro/script_list_keys.pyc
+      lib/googlecloudsdk/api_lib/macro/script_list_keys.py
+      lib/googlecloudsdk/api_lib/macro/__init__.py
+      lib/googlecloudsdk/api_lib/macro/list_service_account_keys.sh
+      lib/googlecloudsdk/api_lib/macro/wrapper_list_instances.pyc
+      lib/googlecloudsdk/api_lib/macro/wrapper_list_instances.py
+      lib/googlecloudsdk/api_lib/macro/library_list_jobs.py
+      lib/googlecloudsdk/api_lib/macro/__init__.pyc
+      ```
+
 Now you need to calculate the sha256 sum for the .tar.gz as well as the content_checksum.
 > Note:  at the moment, gcloud SDK does not enforce size, content_checksum or checksum (meaning these are optional now)
 
 * $ export PYTHONPATH=/path_to/google-cloud-sdk/lib/:$PYTHONPATH
 
-* $ python calculate_content_sum.py 
+* $ python calculate_content_sum.py
     *71dbc333fc2614efd83687361acf4a5fc9d5c4e7a5a74509f0e0aee130c27db1*
 
 * $ ls -la google-cloud-sdk-macro.tar.gz
     -rw-r----- 1 srashid srashid 2898 Jul 23 22:40 google-cloud-sdk-macro.tar.gz
 
-* $ sha256sum google-cloud-sdk-macro.tar.gz 
+* $ sha256sum google-cloud-sdk-macro.tar.gz
     *759c7b3a2fc50a8eaa5689bd7275664bd68a9fce6733ad3e126019b1cc79e4e5*  google-cloud-sdk-macro.tar.gz
 
 then edit the the following file and add in the values:
@@ -254,34 +415,34 @@ then edit the the following file and add in the values:
   "components": [
     {
       "data": {
-        "checksum": "759c7b3a2fc50a8eaa5689bd7275664bd68a9fce6733ad3e126019b1cc79e4e5", 
-        "contents_checksum": "71dbc333fc2614efd83687361acf4a5fc9d5c4e7a5a74509f0e0aee130c27db1", 
-        "size": 2898, 
-        "source": "components/google-cloud-sdk-macro.tar.gz", 
+        "checksum": "759c7b3a2fc50a8eaa5689bd7275664bd68a9fce6733ad3e126019b1cc79e4e5",
+        "contents_checksum": "71dbc333fc2614efd83687361acf4a5fc9d5c4e7a5a74509f0e0aee130c27db1",
+        "size": 7107,
+        "source": "components/google-cloud-sdk-macro.tar.gz",
         "type": "tar"
-      }, 
+      },
       "dependencies": [
-        "core" 
-      ], 
+        "core"
+      ],
       "details": {
-        "description": "Provides the gcloud scripting tool", 
+        "description": "Provides the gcloud scripting tool",
         "display_name": "gcloud embedded scripting tool"
-      }, 
-      "id": "macro", 
-      "is_configuration": false, 
-      "is_hidden": false, 
-      "is_required": false, 
-      "platform": {}, 
+      },
+      "id": "macro",
+      "is_configuration": false,
+      "is_hidden": false,
+      "is_required": false,
+      "platform": {},
       "version": {
-        "build_number": 20170723000000, 
+        "build_number": 20170723000000,
         "version_string": "2017.07.23"
       }
     }
-  ], 
-  "revision": 20170711000025, 
+  ],
+  "revision": 20170711000025,
   "schema_version": {
-    "no_update": false, 
-    "url": "file:///tmp/cloudsdk2/google-cloud-sdk.tar.gz", 
+    "no_update": false,
+    "url": "file:///tmp/cloudsdk2/google-cloud-sdk.tar.gz",
     "version": 3
   }
 }

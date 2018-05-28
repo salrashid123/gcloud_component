@@ -6,5 +6,4 @@ from googlecloudsdk.calliope import base
 
 
 class Script(base.Group):
-  """Manage your Endpoints project."""
-
+  """Gcloud macro sample application; see https://github.com/salrashid123/gcloud_component"""
